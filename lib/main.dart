@@ -1,7 +1,7 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'notification.dart';
 import 'style.dart' as style;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -12,8 +12,11 @@ import 'package:provider/provider.dart';
 
 void main() {
   runApp(
-      ChangeNotifierProvider(
-        create: (c) => Store1(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (c) => Store1()),
+          ChangeNotifierProvider(create: (c) => Store2()),
+        ],
         child: MaterialApp(
           theme: style.themes,
           home: MyApp(),
@@ -57,12 +60,19 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    initNotification(context);
     getData();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        child: Text("+"),
+        onPressed: (){
+          showNotification2();
+        },
+      ),
       appBar: AppBar(
         title: Text("Instagram",style: TextStyle(color: Colors.black),),
         actions: [
@@ -74,6 +84,7 @@ class _MyAppState extends State<MyApp> {
               if(image != null){
                 userImage = File(image.path);
               }
+              // ignore: use_build_context_synchronously
               Navigator.push(context,
                 MaterialPageRoute(builder: (c) => Upload(userImage:userImage) )
               );
@@ -201,9 +212,22 @@ class Upload extends StatelessWidget {
   }
 }
 
+class Store2 extends ChangeNotifier {
+  var name = 'john kim';
+}
+
 class Store1 extends ChangeNotifier{
   var follower= 0;
   var check = false;
+  var profileImage = [];
+
+  getData() async{
+    var result = await http.get(Uri.parse('https://codingapple1.github.io/app/profile.json'));
+    var result2 = jsonDecode(result.body);
+    profileImage = result2;
+    notifyListeners();
+  }
+
   changeName(){
     if(check){
       follower = follower -= 1;
@@ -223,18 +247,43 @@ class Profile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('john kim'),
+        title: Text(context.watch<Store2>().name),
       ),
-      body: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Icon(Icons.account_circle,size: 50,),
-          Text('팔로워 ${context.watch<Store1>().follower}명'),
-          ElevatedButton(onPressed: (){
-            context.read<Store1>().changeName();
-          }, child: Text('팔로우'))
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: ProfileHeader(),
+          ),
+          SliverGrid(
+              delegate: SliverChildBuilderDelegate(
+                  (c,i) => Image.network(context.watch<Store1>().profileImage[i]),
+                childCount: context.watch<Store1>().profileImage.length
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3))
         ],
-      ),
+      )
     );
   }
 }
+
+class ProfileHeader extends StatelessWidget {
+  const ProfileHeader({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        Icon(Icons.account_circle,size: 50,),
+        Text('팔로워 ${context.watch<Store1>().follower}명'),
+        ElevatedButton(onPressed: (){
+          context.read<Store1>().changeName();
+        }, child: Text('팔로우')),
+        ElevatedButton(onPressed: (){
+          context.read<Store1>().getData();
+        }, child: Text('사진가져오기'))
+      ],
+    );
+  }
+}
+
