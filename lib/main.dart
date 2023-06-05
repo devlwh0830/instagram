@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'notification.dart';
 import 'style.dart' as style;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -9,8 +8,18 @@ import 'package:flutter/rendering.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'shop.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
+
+void main() async{
+
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(
       MultiProvider(
         providers: [
@@ -60,17 +69,16 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    initNotification(context);
     getData();
   }
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         child: Text("+"),
         onPressed: (){
-          showNotification2();
         },
       ),
       appBar: AppBar(
@@ -94,7 +102,10 @@ class _MyAppState extends State<MyApp> {
           )
         ],
       ),
-      body: [Home(data : date), Text('샵페이지')][tab],
+
+
+      body: [Home(data : date), Shop()][tab],
+
       bottomNavigationBar: BottomNavigationBar(
         showUnselectedLabels: false,
         showSelectedLabels: false,
